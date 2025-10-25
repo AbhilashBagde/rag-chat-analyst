@@ -1,0 +1,19 @@
+# LangChain core + integrations
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-text-splitters>=0.3.0
+langchain-openai>=0.2.0
+
+# Embeddings + local model support
+transformers>=4.40.0
+sentence-transformers>=2.7.0
+torch>=2.2.0
+
+# Vector store
+faiss-cpu>=1.8.0
+
+# PDF loading
+pypdf>=4.0.0
+
+# For environment variables (API keys etc.)
+python-dotenv>=1.0.0
