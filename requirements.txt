@@ -1,24 +1,22 @@
-# LangChain core + integrations
+# Core LLM / RAG tooling
 langchain>=0.3.0
 langchain-community>=0.3.0
+langchain-core>=0.3.0
 langchain-text-splitters>=0.3.0
-langchain-openai>=0.2.0
 
-# Embeddings + local model support
-transformers>=4.40.0
-sentence-transformers>=2.7.0
-torch>=2.2.0
+# Local vector store / persistence
+chromadb>=0.5.5
 
-# Vector store
-faiss-cpu>=1.8.0
-
-# PDF loading
+# PDF loader
 pypdf>=4.0.0
 
-# For environment variables (API keys etc.)
-python-dotenv>=1.0.0
+# Local LLM + embeddings client
+ollama>=0.3.0
 
-# Web application / API server
+# Web API / local chat UI
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 httpx>=0.27.0
+
+# (optional but helpful if you ever load env vars later)
+python-dotenv>=1.0.0

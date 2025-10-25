@@ -1,19 +1,22 @@
-# Python virtual environment
+# Virtual environments
 .venv/
 venv/
 env/
 
-# Python cache / bytecode
+# Python cache
 __pycache__/
 *.pyc
 
-# Local vector DB / embeddings / indexes
+# Local vector DB / embeddings / cache
 chat_rag_db/
 chroma/
 chroma_db/
 faiss_index/
 
-# Editor / OS noise
-.vscode/
+# Environment / secrets
+.env
+
+# OS / editor junk
 .DS_Store
+.vscode/
 *.log

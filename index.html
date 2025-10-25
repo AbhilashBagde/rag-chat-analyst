@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG Transcript Analyst</title>
+
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background-color: #0f172a; /* slate-900 */
+      color: #e2e8f0; /* slate-200 */
+    }
+    #chat-history {
+      scroll-behavior: smooth;
+    }
+    .msg-user {
+      background-color: #3b82f6; /* blue-500 */
+      color: #fff;
+      border-bottom-right-radius: 0.4rem;
+    }
+    .msg-bot {
+      background-color: rgba(30,41,59,0.8); /* slate-800 w/ alpha */
+      color: #f8fafc; /* slate-50 */
+      border-bottom-left-radius: 0.4rem;
+      border: 1px solid rgba(148,163,184,0.2); /* slate-400/20 */
+    }
+    .bubble-wrap {
+      max-width: 80%;
+    }
+    .spinner {
+      border: 4px solid rgba(226,232,240,0.2); /* slate-200/20 */
+      border-left-color: #3b82f6; /* blue-500 */
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="p-4 border-b border-slate-700 flex items-center justify-between bg-slate-900/80">
+    <div>
+      <div class="text-lg font-semibold text-white flex items-center gap-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+        RAG Transcript Analyst
+      </div>
+      <div class="text-xs text-slate-400">
+        Ask anything about the current PDF transcript. Runs fully local.
+      </div>
+    </div>
+    <div class="text-[10px] text-slate-400 bg-slate-800/80 rounded px-2 py-1 border border-slate-600/40">
+      Ollama + ChromaDB
+    </div>
+  </header>
+
+  <!-- Chat messages -->
+  <main id="chat-history" class="flex-1 overflow-y-auto p-4 space-y-4">
+    <!-- Initial bot message -->
+    <div class="flex justify-start">
+      <div class="bubble-wrap msg-bot rounded-xl px-3 py-2 text-sm leading-relaxed shadow">
+        <div class="text-slate-400 text-xs mb-1 font-medium">Analyst Bot</div>
+        <div>
+          Hi! I'm ready to analyze your transcript.
+          Ask me things like:
+          <div class="text-slate-400 italic mt-1">
+            "Did the CSR offer compensation for the delay?"<br/>
+            "What did the customer want resolved?"<br/>
+            "What is the promised delivery date?"
+          </div>
+          <div class="text-[10px] text-slate-500 mt-2">
+            Make sure the backend server is running on <code>http://localhost:8000</code>
+            and Ollama is running locally.
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Input row -->
+  <footer class="p-4 border-t border-slate-700 bg-slate-900/80">
+    <form id="chat-form" class="flex items-end gap-3">
+      <textarea
+        id="user-input"
+        class="flex-1 bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 placeholder-slate-500 resize-none leading-relaxed"
+        placeholder="Ask a question and press Enter..."
+        rows="1"
+      ></textarea>
+      <button
+        id="send-btn"
+        type="submit"
+        class="bg-blue-500 hover:bg-blue-400 active:bg-blue-600 text-slate-900 font-semibold text-sm rounded-xl px-4 py-2 h-[40px] flex items-center justify-center shadow disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Send
+      </button>
+    </form>
+  </footer>
+
+  <script>
+    const API_URL = "http://localhost:8000/query";
+    const chatHistory = document.getElementById("chat-history");
+    const chatForm = document.getElementById("chat-form");
+    const userInput = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+
+    // auto-resize textarea to feel like chatgpt
+    function autosizeTextarea(el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+    userInput.addEventListener("input", () => autosizeTextarea(userInput));
+
+    function appendUserMessage(text) {
+      const row = document.createElement("div");
+      row.className = "flex justify-end";
+
+      const bubble = document.createElement("div");
+      bubble.className =
+        "bubble-wrap msg-user rounded-xl px-3 py-2 text-sm leading-relaxed shadow";
+      bubble.textContent = text;
+
+      row.appendChild(bubble);
+      chatHistory.appendChild(row);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    function appendBotMessage(text, isError = false) {
+      const row = document.createElement("div");
+      row.className = "flex justify-start";
+
+      const bubble = document.createElement("div");
+      bubble.className =
+        "bubble-wrap msg-bot rounded-xl px-3 py-2 text-sm leading-relaxed shadow";
+      if (isError) {
+        bubble.style.backgroundColor = "rgba(239,68,68,0.15)"; // red-ish
+        bubble.style.border = "1px solid rgba(239,68,68,0.4)";
+        bubble.style.color = "#fecaca"; // text-red-200
+      }
+
+      const header = document.createElement("div");
+      header.className = "text-slate-400 text-xs mb-1 font-medium";
+      header.textContent = "Analyst Bot";
+
+      const body = document.createElement("div");
+      body.innerHTML = text.replace(/\n/g, "<br>");
+
+      bubble.appendChild(header);
+      bubble.appendChild(body);
+      row.appendChild(bubble);
+      chatHistory.appendChild(row);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+
+      return row;
+    }
+
+    function appendThinkingBubble() {
+      const row = document.createElement("div");
+      row.className = "flex justify-start";
+
+      const bubble = document.createElement("div");
+      bubble.className =
+        "bubble-wrap msg-bot rounded-xl px-3 py-2 text-sm leading-relaxed shadow flex items-center gap-2";
+      bubble.innerHTML =
+        '<div class="spinner"></div><div class="text-slate-400 text-xs">Thinking...</div>';
+
+      row.appendChild(bubble);
+      chatHistory.appendChild(row);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+
+      return row;
+    }
+
+    async function sendQuestion(question) {
+      // show user's message
+      appendUserMessage(question);
+
+      // show temporary "thinking" bubble
+      const thinkingRow = appendThinkingBubble();
+
+      // disable UI while waiting
+      sendBtn.disabled = true;
+      userInput.disabled = true;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: question }),
+        });
+
+        if (!res.ok) {
+          // try to parse server error body for details
+          let errDetail = "Server error " + res.status;
+          try {
+            const errJson = await res.json();
+            if (errJson.detail) {
+              errDetail = errJson.detail;
+            }
+          } catch (_) {}
+          throw new Error(errDetail);
+        }
+
+        const data = await res.json();
+
+        // remove thinking bubble
+        thinkingRow.remove();
+
+        // build nice answer with optional source info
+        let finalAnswer = data.answer || "(No answer returned)";
+        if (data.sources && data.sources.length > 0) {
+          const uniqueSources = [...new Set(data.sources)].join(", ");
+          finalAnswer += `<div class="text-[10px] text-slate-500 italic mt-2">Sources: ${uniqueSources}</div>`;
+        }
+
+        appendBotMessage(finalAnswer);
+
+      } catch (err) {
+        console.error("Chat error:", err);
+
+        thinkingRow.remove(); // remove spinner
+        let msg = `I hit an error talking to the backend: ${err.message}`;
+
+        if (String(err.message).toLowerCase().includes("ollama")) {
+          msg =
+            "I couldn't reach Ollama. Make sure:\n" +
+            "1. 'ollama serve' is running in another terminal,\n" +
+            "2. You pulled the models llama3.2:3b and mxbai-embed-large:latest.";
+        }
+
+        appendBotMessage(msg, true);
+      }
+
+      // re-enable UI
+      sendBtn.disabled = false;
+      userInput.disabled = false;
+      userInput.value = "";
+      autosizeTextarea(userInput);
+      userInput.focus();
+    }
+
+    // handle submit (Enter to send)
+    chatForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const q = userInput.value.trim();
+      if (!q) return;
+      await sendQuestion(q);
+    });
+
+    // also allow Enter to send like ChatGPT (Shift+Enter adds newline)
+    userInput.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        const q = userInput.value.trim();
+        if (!q) return;
+        await sendQuestion(q);
+      }
+    });
+
+    // autofocus first load
+    window.addEventListener("load", () => {
+      userInput.focus();
+      autosizeTextarea(userInput);
+    });
+  </script>
+</body>
+</html>
