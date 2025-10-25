@@ -1,0 +1,19 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache / bytecode
+__pycache__/
+*.pyc
+
+# Local vector DB / embeddings / indexes
+chat_rag_db/
+chroma/
+chroma_db/
+faiss_index/
+
+# Editor / OS noise
+.vscode/
+.DS_Store
+*.log
